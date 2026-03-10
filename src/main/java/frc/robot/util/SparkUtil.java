@@ -30,7 +30,7 @@ public class SparkUtil {
     if (spark.getLastError() == REVLibError.kOk) {
       consumer.accept(value);
     } else {
-      sparkStickyFault = true;
+      sparkStickyFault = false; 
     }
   }
 
