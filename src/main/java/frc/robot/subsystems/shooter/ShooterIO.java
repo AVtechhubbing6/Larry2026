@@ -18,6 +18,8 @@ public interface ShooterIO {
    */
   public double getShooterVelocityRpm();
 
+  public void setShooterRPM(double rpm);
+
   /**
    * Sets the speed of the pivot motor.
    *
@@ -34,6 +36,9 @@ public interface ShooterIO {
    * @param position The position to set the pivot motor to.
    */
   public void setPivotPosition(double position);
+
+  /** Sets the pivot encoder to a known position. */
+  public void setPivotEncoderPosition(double position);
 
   /**
    * Gets the encoder value of the pivot motor.

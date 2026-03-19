@@ -3,8 +3,10 @@ package frc.robot.subsystems.shooter;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
+import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkClosedLoopController;
+import com.revrobotics.spark.SparkClosedLoopController.ArbFFUnits;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import frc.robot.Configs.ShooterConfig;
@@ -68,11 +70,26 @@ public class ShooterIOSpark implements ShooterIO {
 
   @Override
   public void setPivotPosition(double position) {
-    pivotController.setSetpoint(position, ControlType.kPosition);
+    pivotController.setSetpoint(
+        position,
+        ControlType.kPosition,
+        ClosedLoopSlot.kSlot0,
+        ShooterConstants.Pivot.kGravityFFVolts,
+        ArbFFUnits.kVoltage);
+  }
+
+  @Override
+  public void setPivotEncoderPosition(double position) {
+    pivotEncoder.setPosition(position);
   }
 
   @Override
   public double getPivotPosition() {
     return pivotEncoder.getPosition();
+  }
+
+  @Override
+  public void setShooterRPM(double rpm) {
+    topMotor.set(rpm);
   }
 }

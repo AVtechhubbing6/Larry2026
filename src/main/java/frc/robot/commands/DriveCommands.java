@@ -28,8 +28,11 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.StartEndCommand;
+import frc.robot.FieldConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveConstants;
+import frc.robot.util.AllianceFlipUtil;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.LinkedList;
@@ -103,6 +106,30 @@ public class DriveCommands {
         drive);
   }
 
+  /** Robot relative drive command using two joysticks. */
+  public static Command joystickDriveRobotRelative(
+      Drive drive,
+      DoubleSupplier xSupplier,
+      DoubleSupplier ySupplier,
+      DoubleSupplier omegaSupplier) {
+    return Commands.run(
+        () -> {
+          Translation2d linearVelocity =
+              getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
+
+          double omega = MathUtil.applyDeadband(omegaSupplier.getAsDouble(), DEADBAND);
+          omega = Math.copySign(omega * omega, omega);
+
+          ChassisSpeeds speeds =
+              new ChassisSpeeds(
+                  linearVelocity.getX() * drive.getMaxLinearSpeedMetersPerSec(),
+                  linearVelocity.getY() * drive.getMaxLinearSpeedMetersPerSec(),
+                  omega * drive.getMaxAngularSpeedRadPerSec());
+          drive.runVelocity(speeds);
+        },
+        drive);
+  }
+
   /**
    * Field relative drive command using joystick for linear control and PID for angular control.
    * Possible use cases include snapping to an angle, aiming at a vision target, or controlling
@@ -157,10 +184,30 @@ public class DriveCommands {
         .beforeStarting(() -> angleController.reset(drive.getRotation().getRadians()));
   }
 
+  /** Field relative drive command that keeps the shooter side pointed at the hub. */
+  public static Command joystickDriveAlignToHub(
+      Drive drive, DoubleSupplier xSupplier, DoubleSupplier ySupplier) {
+    return joystickDriveAtAngle(
+            drive,
+            xSupplier,
+            ySupplier,
+            () -> {
+              Pose2d robotPose = drive.getPose();
+              Translation2d hubCenter =
+                  AllianceFlipUtil.apply(FieldConstants.Hub.blueCenter).getTranslation();
+              Translation2d awayFromHub = robotPose.getTranslation().minus(hubCenter);
+              if (awayFromHub.getNorm() < 1e-6) {
+                return Rotation2d.fromDegrees(drive.getRotation().getDegrees() - 80);
+              }
+              return Rotation2d.fromDegrees(awayFromHub.getAngle().getDegrees() - 80);
+            })
+        .withName("JoystickDriveAlignToHub");
+  }
+
   /**
    * Measures the velocity feedforward constants for the drive motors.
    *
-   * <p>This command should only be used in voltage control mode.
+   * <p>This command should only be used in voltage control mode. b v
    */
   public static Command feedforwardCharacterization(Drive drive) {
     List<Double> velocitySamples = new LinkedList<>();
@@ -294,5 +341,9 @@ public class DriveCommands {
     double[] positions = new double[4];
     Rotation2d lastAngle = new Rotation2d();
     double gyroDelta = 0.0;
+  }
+
+  public static StartEndCommand slowMode(Drive drive) {
+    return new StartEndCommand(() -> drive.applySlowMode(), () -> drive.resetSpeedIndex(), drive);
   }
 }
